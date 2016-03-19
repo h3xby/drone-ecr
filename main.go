@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -67,12 +68,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	bytes, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
+	bytesr, err := base64.StdEncoding.DecodeString(*resp.AuthorizationData[0].AuthorizationToken)
 	if err != nil {
 		fmt.Printf("Error decoding authorization token: %s", err)
 		os.Exit(1)
 	}
-	token := string(bytes[:len(bytes)])
+	token := string(bytesr[:len(bytesr)])
 
 	authTokens := strings.Split(token, ":")
 	if len(authTokens) != 2 {
@@ -262,6 +263,29 @@ func main() {
 		cmd.Stderr = os.Stderr
 		trace(cmd)
 		err = cmd.Run()
+		if err != nil {
+			os.Exit(1)
+		}
+	}
+
+	// Remove untagged images, if any
+	var outbuf bytes.Buffer
+	cmd = exec.Command("docker", "images", "-q", "-f", "dangling=true")
+	cmd.Stdout = &outbuf
+	cmd.Stderr = os.Stderr
+	trace(cmd)
+	err = cmd.Run()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	if outbuf.Len() > 0 {
+		images := strings.Split(strings.TrimSpace(outbuf.String()), "\n")
+		cmd = exec.Command("docker", append([]string{"rmi"}, images...)...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		trace(cmd)
+		err := cmd.Run()
 		if err != nil {
 			os.Exit(1)
 		}
