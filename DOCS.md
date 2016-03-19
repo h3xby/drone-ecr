@@ -72,9 +72,31 @@ publish:
       - HTTP_PROXY=http://yourproxy.com
 ```
 
-## Layer Caching
+## Caching
 
 The Drone build environment is, by default, ephemeral meaning that you layers are not saved between builds. The below example combines Drone's caching feature and Docker's `save` and `load` capabilities to cache and restore image layers between builds:
+
+### Graph directory caching
+
+This is the preferred method when using the `overlay` storage driver. Just use Drone's caching feature to backup and restore the directory `/drone/docker`, as shown in the following example:
+
+```yaml
+publish:
+  erc:
+    access_key: MyAWSAccessKey
+    secret_key: MyAWSSecretKey
+    region: us-east-1
+    repo: foo/bar
+    tag:
+      - latest
+cache:
+  mount:
+    - /drone/docker
+```
+
+NOTE: This probably won't work correctly with the `btrfs` driver, and it will be very inefficient with the `devicemapper` driver. Please make sure to use the `overlay` storage driver with this method.
+
+### Layer Caching
 
 ```yaml
 publish:
